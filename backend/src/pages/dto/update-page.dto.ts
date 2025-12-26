@@ -9,3 +9,4 @@ export class UpdatePageDto extends PartialType(CreatePageDto) {
   status?: PageStatus;
 }
 
+

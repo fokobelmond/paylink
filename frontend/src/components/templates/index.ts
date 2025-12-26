@@ -6,3 +6,4 @@ export { TrainingTemplate } from './TrainingTemplate'
 export { EventTemplate } from './EventTemplate'
 export { AssociationTemplate } from './AssociationTemplate'
 
+

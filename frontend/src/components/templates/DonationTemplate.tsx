@@ -204,3 +204,4 @@ export function DonationTemplate({ page, onPayment, isLoading }: PageTemplatePro
   )
 }
 
+

@@ -8,3 +8,4 @@ export class UpdateServiceDto extends PartialType(CreateServiceDto) {
   isActive?: boolean;
 }
 
+

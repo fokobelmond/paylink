@@ -44,3 +44,4 @@ export function PageTemplate({ page, onPayment, isLoading = false }: PageTemplat
 // Export des props pour les templates individuels
 export type { PageTemplateProps }
 
+
