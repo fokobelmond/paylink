@@ -1,0 +1,341 @@
+// PayLink Database Schema
+// PostgreSQL avec Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// UTILISATEURS
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String    @unique
+  passwordHash  String    @map("password_hash")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  
+  // Statut du compte
+  isVerified    Boolean   @default(false) @map("is_verified")
+  isActive      Boolean   @default(true) @map("is_active")
+  
+  // Timestamps
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+  
+  // Relations
+  pages         Page[]
+  subscription  Subscription?
+  refreshTokens RefreshToken[]
+  
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("refresh_tokens")
+}
+
+// ============================================
+// PAGES PUBLIQUES
+// ============================================
+
+enum TemplateType {
+  SERVICE_PROVIDER  // Prestataire de services
+  SIMPLE_SALE       // Vente simple
+  DONATION          // Don / ONG
+  TRAINING          // Formation
+  EVENT             // Événement
+  ASSOCIATION       // Association / Cotisation
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+model Page {
+  id              String       @id @default(cuid())
+  slug            String       @unique  // URL unique: paylink.cm/p/mon-slug
+  
+  // Propriétaire
+  userId          String       @map("user_id")
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Type de template
+  templateType    TemplateType @map("template_type")
+  status          PageStatus   @default(DRAFT)
+  
+  // Contenu commun
+  title           String
+  description     String?      @db.Text
+  logoUrl         String?      @map("logo_url")
+  primaryColor    String       @default("#2563eb") @map("primary_color")
+  
+  // Données spécifiques au template (JSON flexible)
+  templateData    Json         @default("{}") @map("template_data")
+  
+  // Statistiques
+  viewCount       Int          @default(0) @map("view_count")
+  
+  // Timestamps
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  publishedAt     DateTime?    @map("published_at")
+  
+  // Relations
+  services        Service[]
+  transactions    Transaction[]
+  
+  @@index([userId])
+  @@index([slug])
+  @@map("pages")
+}
+
+// ============================================
+// SERVICES / ITEMS
+// ============================================
+
+// Mode de tarification
+enum PricingMode {
+  NET_AMOUNT    // Vendeur définit ce qu'il veut recevoir (défaut)
+  FIXED_PRICE   // Vendeur fixe le prix public
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  pageId      String   @map("page_id")
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?  @db.Text
+  
+  // === TARIFICATION ===
+  pricingMode     PricingMode @default(NET_AMOUNT) @map("pricing_mode")
+  // Montant saisi par le vendeur (selon le mode)
+  basePrice       Int         @map("base_price")  // FCFA
+  // Prix calculé pour le client (avec frais inclus)
+  displayPrice    Int         @map("display_price") // FCFA - ce que le client paie
+  // Montant net que le vendeur recevra
+  netPrice        Int         @map("net_price") // FCFA - ce que le vendeur reçoit
+  
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  transactions Transaction[]
+  
+  @@index([pageId])
+  @@map("services")
+}
+
+// ============================================
+// TRANSACTIONS / PAIEMENTS
+// ============================================
+
+enum PaymentProvider {
+  ORANGE_MONEY
+  MTN_MOMO
+}
+
+enum TransactionStatus {
+  PENDING     // En attente de paiement
+  PROCESSING  // Paiement en cours
+  SUCCESS     // Paiement réussi
+  FAILED      // Paiement échoué
+  CANCELLED   // Annulé
+  REFUNDED    // Remboursé
+}
+
+model Transaction {
+  id                  String            @id @default(cuid())
+  reference           String            @unique  // Référence unique lisible: PL-XXXXXX
+  
+  // Page et service
+  pageId              String            @map("page_id")
+  page                Page              @relation(fields: [pageId], references: [id])
+  serviceId           String?           @map("service_id")
+  service             Service?          @relation(fields: [serviceId], references: [id])
+  
+  // === MONTANTS (CRITIQUE - Traçabilité financière) ===
+  // Montant brut payé par le client (ce qu'il débourse)
+  grossAmount         Int               @map("gross_amount")
+  // Montant net reçu par le vendeur (ce qu'il reçoit)
+  netAmount           Int               @map("net_amount")
+  // Frais du provider (Orange/MTN)
+  providerFee         Int               @map("provider_fee")
+  // Marge plateforme PayLink
+  platformFee         Int               @map("platform_fee")
+  // Devise
+  currency            String            @default("XAF")
+  
+  // Détails du panier (si plusieurs services)
+  cartItems           Json?             @map("cart_items") // [{serviceId, quantity, unitPrice}]
+  
+  // Payeur
+  payerPhone          String            @map("payer_phone")
+  payerName           String?           @map("payer_name")
+  payerEmail          String?           @map("payer_email")
+  
+  // Paiement
+  provider            PaymentProvider
+  status              TransactionStatus @default(PENDING)
+  providerReference   String?           @map("provider_reference")
+  providerResponse    Json?             @map("provider_response")
+  
+  // Snapshot des frais appliqués (pour audit)
+  feeSnapshot         Json              @map("fee_snapshot") // Copie des frais au moment du paiement
+  
+  // Idempotence
+  idempotencyKey      String            @unique @map("idempotency_key")
+  
+  // Notifications
+  smsSent             Boolean           @default(false) @map("sms_sent")
+  emailSent           Boolean           @default(false) @map("email_sent")
+  
+  // Timestamps
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  paidAt              DateTime?         @map("paid_at")
+  
+  // Logs pour traçabilité
+  logs                TransactionLog[]
+  
+  @@index([pageId])
+  @@index([reference])
+  @@index([payerPhone])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model TransactionLog {
+  id            String      @id @default(cuid())
+  transactionId String      @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  event         String      // Type d'événement
+  message       String      @db.Text
+  metadata      Json?
+  
+  createdAt     DateTime    @default(now()) @map("created_at")
+  
+  @@index([transactionId])
+  @@map("transaction_logs")
+}
+
+// ============================================
+// ABONNEMENTS
+// ============================================
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String             @unique @map("user_id")
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  plan            SubscriptionPlan   @default(FREE)
+  status          SubscriptionStatus @default(ACTIVE)
+  
+  // Limites selon le plan
+  maxPages        Int                @default(1) @map("max_pages")
+  transactionFee  Float              @default(0.03) @map("transaction_fee") // 3% par défaut
+  
+  // Période
+  startDate       DateTime           @default(now()) @map("start_date")
+  endDate         DateTime?          @map("end_date")
+  
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+  
+  @@map("subscriptions")
+}
+
+// ============================================
+// FRAIS DE PAIEMENT (CRITIQUE)
+// Configuration des frais par provider
+// ============================================
+
+model PaymentFee {
+  id              String          @id @default(cuid())
+  provider        PaymentProvider
+  
+  // Plage de montants applicable
+  minAmount       Int             @map("min_amount")  // Montant minimum en FCFA
+  maxAmount       Int             @map("max_amount")  // Montant maximum en FCFA
+  
+  // Structure des frais
+  fixedFee        Int             @default(0) @map("fixed_fee")    // Frais fixes en FCFA
+  percentageFee   Float           @default(0) @map("percentage_fee") // Frais en % (ex: 0.02 = 2%)
+  
+  // Marge plateforme PayLink
+  platformFixedFee    Int         @default(0) @map("platform_fixed_fee")
+  platformPercentage  Float       @default(0.02) @map("platform_percentage") // 2% par défaut
+  
+  // Métadonnées
+  label           String?         // Ex: "Frais standard", "Micro-paiement"
+  isActive        Boolean         @default(true) @map("is_active")
+  version         Int             @default(1)    // Pour versionner les changements
+  
+  // Timestamps
+  validFrom       DateTime        @default(now()) @map("valid_from")
+  validUntil      DateTime?       @map("valid_until")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  @@unique([provider, minAmount, maxAmount, version])
+  @@index([provider, isActive])
+  @@map("payment_fees")
+}
+
+// ============================================
+// WEBHOOKS REÇUS (pour traçabilité)
+// ============================================
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  provider      String   // orange_money, mtn_momo
+  eventType     String   @map("event_type")
+  payload       Json
+  signature     String?
+  isValid       Boolean  @default(false) @map("is_valid")
+  processedAt   DateTime? @map("processed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  @@index([provider, eventType])
+  @@index([createdAt])
+  @@map("webhook_events")
+}
+
