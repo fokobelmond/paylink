@@ -166,11 +166,11 @@ export default function RegisterPage() {
               />
               <span className="text-sm text-slate-600">
                 J'accepte les{' '}
-                <Link href="/terms" className="text-primary-600 hover:underline">
+                <Link href="/conditions" className="text-primary-600 hover:underline">
                   conditions d'utilisation
                 </Link>{' '}
                 et la{' '}
-                <Link href="/privacy" className="text-primary-600 hover:underline">
+               <Link href="/confidentialite" className="text-primary-600 hover:underline">
                   politique de confidentialité
                 </Link>
               </span>
