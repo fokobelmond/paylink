@@ -38,12 +38,48 @@ const features = [
 ]
 
 const templates = [
-  { name: 'Prestataire', icon: '🔧', description: 'Freelances, coachs, réparateurs' },
-  { name: 'Vente simple', icon: '🛍️', description: 'Vendeurs WhatsApp' },
-  { name: 'Don / ONG', icon: '❤️', description: 'Associations, collectes' },
-  { name: 'Formation', icon: '📚', description: 'Écoles, formateurs' },
-  { name: 'Événement', icon: '🎉', description: 'Concerts, conférences' },
-  { name: 'Association', icon: '🤝', description: 'Clubs, cotisations' },
+  { 
+    name: 'Prestataire', 
+    icon: '🔧', 
+    description: 'Freelances, coachs, réparateurs',
+    demoSlug: 'marie-coiffure',
+    demoName: 'Marie Coiffure',
+  },
+  { 
+    name: 'Vente simple', 
+    icon: '🛍️', 
+    description: 'Vendeurs WhatsApp',
+    demoSlug: 'vente-telephone',
+    demoName: 'iPhone 14 Pro Max',
+  },
+  { 
+    name: 'Don / ONG', 
+    icon: '❤️', 
+    description: 'Associations, collectes',
+    demoSlug: 'ong-espoir',
+    demoName: 'ONG Espoir Cameroun',
+  },
+  { 
+    name: 'Formation', 
+    icon: '📚', 
+    description: 'Écoles, formateurs',
+    demoSlug: 'formation-excel',
+    demoName: 'Formation Excel Pro',
+  },
+  { 
+    name: 'Événement', 
+    icon: '🎉', 
+    description: 'Concerts, conférences',
+    demoSlug: 'concert-makossa',
+    demoName: 'Concert Makossa Night',
+  },
+  { 
+    name: 'Association', 
+    icon: '🤝', 
+    description: 'Clubs, cotisations',
+    demoSlug: 'club-entrepreneurs',
+    demoName: 'Club des Entrepreneurs',
+  },
 ]
 
 const testimonials = [
@@ -162,7 +198,7 @@ export default function HomePage() {
                   Créer ma page gratuitement
                   <ArrowRight className="w-5 h-5" />
                 </Link>
-                   <Link href="/p/marie-coiffure" className="btn-outline text-lg px-8 py-4 w-full sm:w-auto">
+                <Link href="/p/marie-coiffure" className="btn-outline text-lg px-8 py-4 w-full sm:w-auto">
                   Voir une démo
                 </Link>
               </div>
@@ -288,13 +324,42 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.1, duration: 0.4 }}
                 viewport={{ once: true }}
-                className="group bg-white rounded-xl p-6 border border-slate-200 hover:border-primary-300 hover:shadow-lg transition-all cursor-pointer"
+                className="group bg-white rounded-xl p-6 border border-slate-200 hover:border-primary-300 hover:shadow-lg transition-all"
               >
                 <div className="text-4xl mb-4">{template.icon}</div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-1 group-hover:text-primary-600 transition">
                   {template.name}
                 </h3>
-                <p className="text-slate-600">{template.description}</p>
+                <p className="text-slate-600 mb-2">{template.description}</p>
+                
+                {/* Exemple de démo */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <p className="text-xs text-slate-500 mb-2">Exemple : {template.demoName}</p>
+                  
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href={`/p/${template.demoSlug}`}
+                      className="w-full text-center px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition"
+                    >
+                      👁️ Voir la démo
+                    </Link>
+                    
+                    <div className="flex gap-2">
+                      <Link
+                        href="/register"
+                        className="flex-1 text-center px-3 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition"
+                      >
+                        Créer un compte
+                      </Link>
+                      <Link
+                        href="/login"
+                        className="flex-1 text-center px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition"
+                      >
+                        Se connecter
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
@@ -518,4 +583,5 @@ export default function HomePage() {
     </div>
   )
 }
+
 
