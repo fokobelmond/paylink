@@ -78,14 +78,14 @@ export class UsersService {
         status: 'SUCCESS',
       },
       _sum: {
-        amount: true,
+        grossAmount: true,
       },
     });
 
     return {
       totalPages: pages,
       totalTransactions: transactions,
-      totalRevenue: revenue._sum.amount || 0,
+      totalRevenue: revenue._sum?.grossAmount || 0,
     };
   }
 }
