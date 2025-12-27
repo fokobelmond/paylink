@@ -462,9 +462,9 @@ Propriétaire - Tous droits réservés.
 
 ## 📞 Support
 
-- 📧 Email: support@paylink.cm
-- 💬 WhatsApp: +237 6XX XXX XXX
-- 🌐 Site: https://paylink.cm
+- 📧 Email: fokobelmond@gmail.com
+- 💬 WhatsApp: +33 775846398
+- 🌐 Site: https://paylink-now.vercel.app/
 
 ---
 
