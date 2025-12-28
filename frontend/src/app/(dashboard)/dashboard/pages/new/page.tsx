@@ -124,20 +124,29 @@ export default function NewPagePage() {
         description: data.description || undefined,
         templateType: selectedTemplate,
         primaryColor: selectedColor,
-        templateData: {
-          type: selectedTemplate,
-        },
       })
 
-      if (response.success) {
+      if (response.success && response.data) {
         toast.success('Page créée avec succès !')
-        router.push('/dashboard/pages')
+        // Rediriger vers la page d'édition pour ajouter des services
+        router.push(`/dashboard/pages/${response.data.id}`)
       } else {
         toast.error(response.message || 'Erreur lors de la création')
       }
     } catch (error) {
+      console.error('Erreur création page:', error)
       const apiError = error as ApiError
-      toast.error(apiError.message || 'Erreur lors de la création')
+      // Afficher un message d'erreur plus détaillé
+      if (apiError.statusCode === 403) {
+        toast.error('Vous avez atteint la limite de pages. Passez à un plan supérieur.')
+      } else if (apiError.statusCode === 409) {
+        toast.error('Ce slug est déjà utilisé. Choisissez un autre nom.')
+      } else if (apiError.statusCode === 401) {
+        toast.error('Session expirée. Veuillez vous reconnecter.')
+        router.push('/login')
+      } else {
+        toast.error(apiError.message || 'Erreur lors de la création')
+      }
     } finally {
       setIsLoading(false)
     }

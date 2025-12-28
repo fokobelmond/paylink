@@ -73,18 +73,22 @@ export default function PagesListPage() {
 
   // Publier/mettre en pause une page
   const handleToggleStatus = async (page: Page) => {
-    const newStatus = page.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED'
+    const isPublishing = page.status !== 'PUBLISHED'
     
     try {
-      const res = await pagesApi.update(page.id, { status: newStatus })
+      const res = isPublishing 
+        ? await pagesApi.publish(page.id)
+        : await pagesApi.unpublish(page.id)
+      
       if (res.success) {
-        setPages(pages.map(p => p.id === page.id ? { ...p, status: newStatus } : p))
-        toast.success(newStatus === 'PUBLISHED' ? 'Page publiée' : 'Page mise en pause')
+        setPages(pages.map(p => p.id === page.id ? res.data : p))
+        toast.success(isPublishing ? 'Page publiée' : 'Page mise en pause')
       } else {
         toast.error(res.message || 'Erreur lors de la mise à jour')
       }
-    } catch (error) {
-      toast.error('Erreur réseau')
+    } catch (error: unknown) {
+      const apiError = error as { message?: string }
+      toast.error(apiError.message || 'Erreur lors de la mise à jour')
     }
     setOpenMenuId(null)
   }

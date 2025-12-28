@@ -131,18 +131,26 @@ export default function EditPagePage() {
 
   const handlePublish = async () => {
     if (!page) return
-    const newStatus = page.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED'
+    const isPublishing = page.status !== 'PUBLISHED'
     
     try {
-      const res = await pagesApi.update(pageId, { status: newStatus })
+      const res = isPublishing 
+        ? await pagesApi.publish(pageId)
+        : await pagesApi.unpublish(pageId)
+        
       if (res.success) {
-        setPage({ ...page, status: newStatus })
-        toast.success(newStatus === 'PUBLISHED' ? 'Page publiée !' : 'Page mise en pause')
+        setPage(res.data)
+        toast.success(isPublishing ? 'Page publiée !' : 'Page mise en pause')
       } else {
         toast.error(res.message || 'Erreur lors de la mise à jour')
       }
-    } catch (error) {
-      toast.error('Erreur réseau')
+    } catch (error: unknown) {
+      const apiError = error as { message?: string }
+      if (isPublishing && apiError.message?.includes('service')) {
+        toast.error('Ajoutez au moins un service avant de publier')
+      } else {
+        toast.error(apiError.message || 'Erreur lors de la mise à jour')
+      }
     }
   }
 

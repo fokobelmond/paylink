@@ -18,12 +18,20 @@ export class PagesService {
    */
   async create(userId: string, dto: CreatePageDto) {
     // Vérifier les limites de l'abonnement
-    const subscription = await this.prisma.subscription.findUnique({
+    let subscription = await this.prisma.subscription.findUnique({
       where: { userId },
     });
 
+    // Créer un abonnement gratuit si inexistant (pour les anciens utilisateurs)
     if (!subscription) {
-      throw new ForbiddenException('Abonnement non trouvé');
+      subscription = await this.prisma.subscription.create({
+        data: {
+          userId,
+          plan: 'FREE',
+          maxPages: 1,
+          transactionFee: 0.03,
+        },
+      });
     }
 
     const existingPagesCount = await this.prisma.page.count({
