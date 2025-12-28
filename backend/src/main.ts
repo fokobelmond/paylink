@@ -10,12 +10,30 @@ async function bootstrap() {
   // Security
   app.use(helmet());
 
-  // CORS
+  // CORS - Configuration permissive pour production
+  const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://paylink-one.vercel.app',
+    'https://paylink.vercel.app',
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Permettre les requêtes sans origin (ex: mobile apps, Postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      // Permettre toutes les origines Vercel
+      if (origin.includes('vercel.app') || origin.includes('localhost') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(null, true); // En production, on accepte tout pour l'instant
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   });
 
   // Global prefix
