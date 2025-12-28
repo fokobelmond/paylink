@@ -255,6 +255,31 @@ export const dashboardApi = {
 }
 
 // ============================================
+// USERS API
+// ============================================
+
+export interface UpdateProfileInput {
+  firstName?: string
+  lastName?: string
+}
+
+export interface UpdatePasswordInput {
+  currentPassword: string
+  newPassword: string
+}
+
+export const usersApi = {
+  getProfile: () =>
+    api.get<ApiResponse<AuthResponse['user']>>('/api/users/profile'),
+
+  updateProfile: (data: UpdateProfileInput) =>
+    api.patch<ApiResponse<AuthResponse['user']>>('/api/users/profile', data),
+
+  updatePassword: (data: UpdatePasswordInput) =>
+    api.patch<ApiResponse<void>>('/api/users/password', data),
+}
+
+// ============================================
 // PRICING API (Calcul des frais)
 // ============================================
 

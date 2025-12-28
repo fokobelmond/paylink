@@ -4,6 +4,7 @@ import {
   Patch,
   Body,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -14,6 +15,7 @@ import {
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import * as bcrypt from 'bcrypt';
 
 @ApiTags('users')
 @Controller('users')
@@ -65,6 +67,34 @@ export class UsersController {
     return {
       success: true,
       data: stats,
+    };
+  }
+
+  @Patch('password')
+  @ApiOperation({ summary: 'Changer le mot de passe' })
+  @ApiResponse({ status: 200, description: 'Mot de passe mis à jour' })
+  @ApiResponse({ status: 400, description: 'Mot de passe actuel incorrect' })
+  async updatePassword(
+    @CurrentUser('id') userId: string,
+    @Body() data: { currentPassword: string; newPassword: string },
+  ) {
+    const user = await this.usersService.findById(userId);
+
+    // Vérifier le mot de passe actuel
+    const isPasswordValid = await bcrypt.compare(
+      data.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      throw new BadRequestException('Mot de passe actuel incorrect');
+    }
+
+    await this.usersService.updatePassword(userId, data.newPassword);
+
+    return {
+      success: true,
+      message: 'Mot de passe mis à jour',
     };
   }
 }

@@ -1,14 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Search,
-  Filter,
   Download,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -24,110 +23,8 @@ import {
   type Transaction,
   type TransactionStatus,
 } from '@/types'
-
-// Données mock avec nouveaux champs de frais
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    reference: 'PL-A7X3K9',
-    pageId: 'page1',
-    serviceId: 'service1',
-    grossAmount: 15600,
-    netAmount: 15000,
-    providerFee: 234,
-    platformFee: 366,
-    amount: 15600,
-    currency: 'XAF',
-    payerPhone: '237655123456',
-    payerName: 'Jean Kamga',
-    payerEmail: 'jean@exemple.com',
-    provider: 'ORANGE_MONEY',
-    status: 'SUCCESS',
-    providerReference: 'OM123456',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    paidAt: new Date(Date.now() - 1000 * 60 * 29).toISOString(),
-  },
-  {
-    id: '2',
-    reference: 'PL-B2Y8M5',
-    pageId: 'page1',
-    serviceId: null,
-    grossAmount: 5200,
-    netAmount: 5000,
-    providerFee: 78,
-    platformFee: 122,
-    amount: 5200,
-    currency: 'XAF',
-    payerPhone: '237670987654',
-    payerName: 'Marie Fouda',
-    payerEmail: null,
-    provider: 'MTN_MOMO',
-    status: 'SUCCESS',
-    providerReference: 'MTN789012',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    paidAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: '3',
-    reference: 'PL-C9Z1N4',
-    pageId: 'page2',
-    serviceId: null,
-    grossAmount: 26000,
-    netAmount: 25000,
-    providerFee: 390,
-    platformFee: 610,
-    amount: 26000,
-    currency: 'XAF',
-    payerPhone: '237699111222',
-    payerName: 'Paul Ndjock',
-    payerEmail: null,
-    provider: 'ORANGE_MONEY',
-    status: 'PENDING',
-    providerReference: null,
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    paidAt: null,
-  },
-  {
-    id: '4',
-    reference: 'PL-D4K7P2',
-    pageId: 'page1',
-    serviceId: 'service2',
-    grossAmount: 8300,
-    netAmount: 8000,
-    providerFee: 125,
-    platformFee: 175,
-    amount: 8300,
-    currency: 'XAF',
-    payerPhone: '237677888999',
-    payerName: 'Alice Mbarga',
-    payerEmail: 'alice@exemple.com',
-    provider: 'MTN_MOMO',
-    status: 'FAILED',
-    providerReference: null,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    paidAt: null,
-  },
-  {
-    id: '5',
-    reference: 'PL-E1M9R6',
-    pageId: 'page3',
-    serviceId: null,
-    grossAmount: 52000,
-    netAmount: 50000,
-    providerFee: 780,
-    platformFee: 1220,
-    amount: 52000,
-    currency: 'XAF',
-    payerPhone: '237650111222',
-    payerName: 'Entreprise XYZ',
-    payerEmail: 'contact@xyz.cm',
-    provider: 'ORANGE_MONEY',
-    status: 'SUCCESS',
-    providerReference: 'OM987654',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-  },
-]
+import { transactionsApi } from '@/lib/api'
+import { toast } from 'sonner'
 
 const statusFilters: { value: TransactionStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'Toutes' },
@@ -138,12 +35,37 @@ const statusFilters: { value: TransactionStatus | 'ALL'; label: string }[] = [
 ]
 
 export default function TransactionsPage() {
-  const [transactions] = useState<Transaction[]>(mockTransactions)
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [totalItems, setTotalItems] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'ALL'>('ALL')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
+  // Charger les transactions depuis le backend
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setIsLoading(true)
+      try {
+        const res = await transactionsApi.list(currentPage, itemsPerPage)
+        if (res.success) {
+          setTransactions(res.data.data)
+          setTotalItems(res.data.total)
+        } else {
+          toast.error('Erreur lors du chargement des transactions')
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error)
+        toast.error('Erreur réseau')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchTransactions()
+  }, [currentPage])
+
+  // Filtrage local (recherche et statut)
   const filteredTransactions = transactions.filter((tx) => {
     const matchesSearch =
       tx.reference.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -155,16 +77,20 @@ export default function TransactionsPage() {
     return matchesSearch && matchesStatus
   })
 
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage)
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
 
   const totalSuccess = transactions.filter((tx) => tx.status === 'SUCCESS').length
   const totalRevenue = transactions
     .filter((tx) => tx.status === 'SUCCESS')
-    .reduce((sum, tx) => sum + tx.amount, 0)
+    .reduce((sum, tx) => sum + (tx.grossAmount || tx.amount), 0)
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -268,7 +194,7 @@ export default function TransactionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedTransactions.map((tx) => (
+              {filteredTransactions.map((tx) => (
                 <tr key={tx.id} className="hover:bg-slate-50 transition">
                   <td className="px-4 py-4">
                     <span className="font-mono font-medium text-slate-900">
@@ -340,8 +266,8 @@ export default function TransactionsPage() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200">
             <p className="text-sm text-slate-500">
               {(currentPage - 1) * itemsPerPage + 1} -{' '}
-              {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} sur{' '}
-              {filteredTransactions.length}
+              {Math.min(currentPage * itemsPerPage, totalItems)} sur{' '}
+              {totalItems}
             </p>
             <div className="flex items-center gap-2">
               <button

@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/store/auth'
+import { usersApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const profileSchema = z.object({
@@ -77,8 +78,15 @@ export default function SettingsPage() {
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsProfileLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      toast.success('Profil mis à jour')
+      const res = await usersApi.updateProfile({
+        firstName: data.firstName,
+        lastName: data.lastName,
+      })
+      if (res.success) {
+        toast.success('Profil mis à jour')
+      } else {
+        toast.error('Erreur lors de la mise à jour')
+      }
     } catch {
       toast.error('Erreur lors de la mise à jour')
     } finally {
@@ -89,9 +97,16 @@ export default function SettingsPage() {
   const onPasswordSubmit = async (data: PasswordFormData) => {
     setIsPasswordLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      toast.success('Mot de passe mis à jour')
-      passwordForm.reset()
+      const res = await usersApi.updatePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      })
+      if (res.success) {
+        toast.success('Mot de passe mis à jour')
+        passwordForm.reset()
+      } else {
+        toast.error('Erreur lors de la mise à jour')
+      }
     } catch {
       toast.error('Erreur lors de la mise à jour')
     } finally {

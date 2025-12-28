@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -15,73 +15,79 @@ import {
   Eye,
   Pause,
   Play,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { formatRelativeDate, copyToClipboard, cn } from '@/lib/utils'
 import { TEMPLATE_ICONS, TEMPLATE_LABELS } from '@/types'
+import { pagesApi } from '@/lib/api'
+import { toast } from 'sonner'
 import type { Page } from '@/types'
 
-// Données mock
-const mockPages: Page[] = [
-  {
-    id: 'page1',
-    slug: 'marie-coiffure',
-    userId: 'user1',
-    templateType: 'SERVICE_PROVIDER',
-    status: 'PUBLISHED',
-    title: 'Marie Coiffure',
-    description: 'Coiffure et soins capillaires à Douala',
-    logoUrl: null,
-    primaryColor: '#2563eb',
-    templateData: { type: 'SERVICE_PROVIDER' },
-    viewCount: 234,
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-20T14:30:00Z',
-    publishedAt: '2024-01-15T12:00:00Z',
-    services: [],
-  },
-  {
-    id: 'page2',
-    slug: 'formation-excel',
-    userId: 'user1',
-    templateType: 'TRAINING',
-    status: 'DRAFT',
-    title: 'Formation Excel Pro',
-    description: 'Maîtrisez Excel en 5 jours',
-    logoUrl: null,
-    primaryColor: '#059669',
-    templateData: { type: 'TRAINING', trainingName: 'Excel Pro' },
-    viewCount: 0,
-    createdAt: '2024-01-22T09:00:00Z',
-    updatedAt: '2024-01-22T09:00:00Z',
-    publishedAt: null,
-    services: [],
-  },
-  {
-    id: 'page3',
-    slug: 'ong-espoir',
-    userId: 'user1',
-    templateType: 'DONATION',
-    status: 'PUBLISHED',
-    title: 'ONG Espoir Cameroun',
-    description: 'Aidez-nous à construire des écoles',
-    logoUrl: null,
-    primaryColor: '#dc2626',
-    templateData: { type: 'DONATION', cause: 'Éducation' },
-    viewCount: 567,
-    createdAt: '2024-01-10T08:00:00Z',
-    updatedAt: '2024-01-25T11:00:00Z',
-    publishedAt: '2024-01-10T09:00:00Z',
-    services: [],
-  },
-]
-
 export default function PagesListPage() {
-  const [pages] = useState<Page[]>(mockPages)
+  const [pages, setPages] = useState<Page[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+
+  // Charger les pages depuis le backend
+  useEffect(() => {
+    const fetchPages = async () => {
+      setIsLoading(true)
+      try {
+        const res = await pagesApi.list(1, 50)
+        if (res.success) {
+          setPages(res.data.data)
+        } else {
+          toast.error('Erreur lors du chargement des pages')
+        }
+      } catch (error) {
+        console.error('Failed to fetch pages:', error)
+        toast.error('Erreur réseau')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchPages()
+  }, [])
+
+  // Supprimer une page
+  const handleDelete = async (pageId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette page ?')) return
+    
+    try {
+      const res = await pagesApi.delete(pageId)
+      if (res.success) {
+        setPages(pages.filter(p => p.id !== pageId))
+        toast.success('Page supprimée')
+      } else {
+        toast.error(res.message || 'Erreur lors de la suppression')
+      }
+    } catch (error) {
+      toast.error('Erreur réseau')
+    }
+    setOpenMenuId(null)
+  }
+
+  // Publier/mettre en pause une page
+  const handleToggleStatus = async (page: Page) => {
+    const newStatus = page.status === 'PUBLISHED' ? 'PAUSED' : 'PUBLISHED'
+    
+    try {
+      const res = await pagesApi.update(page.id, { status: newStatus })
+      if (res.success) {
+        setPages(pages.map(p => p.id === page.id ? { ...p, status: newStatus } : p))
+        toast.success(newStatus === 'PUBLISHED' ? 'Page publiée' : 'Page mise en pause')
+      } else {
+        toast.error(res.message || 'Erreur lors de la mise à jour')
+      }
+    } catch (error) {
+      toast.error('Erreur réseau')
+    }
+    setOpenMenuId(null)
+  }
 
   const filteredPages = pages.filter(
     (page) =>
@@ -124,6 +130,14 @@ export default function PagesListPage() {
       default:
         return null
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      </div>
+    )
   }
 
   return (
@@ -252,17 +266,26 @@ export default function PagesListPage() {
                         />
                         <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
                           {page.status === 'PUBLISHED' ? (
-                            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <button 
+                              onClick={() => handleToggleStatus(page)}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
                               <Pause className="w-4 h-4" />
                               Mettre en pause
                             </button>
                           ) : (
-                            <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                            <button 
+                              onClick={() => handleToggleStatus(page)}
+                              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                            >
                               <Play className="w-4 h-4" />
                               Publier
                             </button>
                           )}
-                          <button className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                          <button 
+                            onClick={() => handleDelete(page.id)}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
                             <Trash2 className="w-4 h-4" />
                             Supprimer
                           </button>
