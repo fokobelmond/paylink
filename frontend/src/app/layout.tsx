@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
+import { PwaRegistration } from '@/components/ui/PwaRegistration'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -77,6 +78,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="PayLink" />
       </head>
       <body className="min-h-screen bg-slate-50">
+        <PwaRegistration />
         {children}
         <Toaster
           position="top-center"

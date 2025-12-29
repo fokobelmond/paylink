@@ -88,6 +88,14 @@ export class UsersService {
       totalRevenue: revenue._sum?.grossAmount || 0,
     };
   }
+
+  async deleteAccount(userId: string) {
+    // La suppression en cascade est configurée dans Prisma (onDelete: Cascade)
+    // Cela supprimera les pages, refresh tokens, etc.
+    return this.prisma.user.delete({
+      where: { id: userId },
+    });
+  }
 }
 
 

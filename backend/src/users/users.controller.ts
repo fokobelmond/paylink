@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Body,
   UseGuards,
   BadRequestException,
@@ -95,6 +96,17 @@ export class UsersController {
     return {
       success: true,
       message: 'Mot de passe mis à jour',
+    };
+  }
+
+  @Delete('me')
+  @ApiOperation({ summary: 'Supprimer mon compte' })
+  @ApiResponse({ status: 200, description: 'Compte supprimé' })
+  async deleteAccount(@CurrentUser('id') userId: string) {
+    await this.usersService.deleteAccount(userId);
+    return {
+      success: true,
+      message: 'Compte supprimé avec succès',
     };
   }
 }

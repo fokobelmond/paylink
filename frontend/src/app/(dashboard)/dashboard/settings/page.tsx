@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Check,
   Smartphone,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -51,10 +53,11 @@ const tabs = [
 ]
 
 export default function SettingsPage() {
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const [activeTab, setActiveTab] = useState('profile')
   const [isProfileLoading, setIsProfileLoading] = useState(false)
   const [isPasswordLoading, setIsPasswordLoading] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -111,6 +114,28 @@ export default function SettingsPage() {
       toast.error('Erreur lors de la mise à jour')
     } finally {
       setIsPasswordLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible et supprimera toutes vos pages et transactions.')) {
+      return
+    }
+
+    setIsDeletingAccount(true)
+    try {
+      const res = await usersApi.deleteAccount()
+      if (res.success) {
+        toast.success('Compte supprimé avec succès')
+        await logout()
+        window.location.href = '/'
+      } else {
+        toast.error('Erreur lors de la suppression')
+      }
+    } catch {
+      toast.error('Erreur réseau')
+    } finally {
+      setIsDeletingAccount(false)
     }
   }
 
@@ -259,6 +284,36 @@ export default function SettingsPage() {
                       Activer
                     </Button>
                   </div>
+                </div>
+
+                <div className="bg-red-50 rounded-xl border border-red-100 p-6">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">
+                        Zone de danger
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        Action irréversible sur votre compte
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-6">
+                    La suppression de votre compte entraînera la suppression définitive de
+                    toutes vos pages de paiement, votre historique de transactions et vos
+                    données personnelles.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                    onClick={handleDeleteAccount}
+                    isLoading={isDeletingAccount}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer mon compte définitvement
+                  </Button>
                 </div>
               </div>
             )}
