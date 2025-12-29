@@ -268,6 +268,8 @@ export interface Transaction {
 export interface PaymentInitInput {
   pageId: string
   serviceId?: string
+  // Montant libre (pour les dons par exemple)
+  amount?: number
   // Panier (optionnel - pour paiements multiples)
   cartItems?: Array<{
     serviceId: string

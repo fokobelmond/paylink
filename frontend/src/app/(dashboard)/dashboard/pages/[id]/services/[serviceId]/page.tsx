@@ -61,8 +61,7 @@ export default function EditServicePage() {
             setService(foundService)
             setValue('name', foundService.name)
             setValue('description', foundService.description || '')
-            setValue('price', foundService.price)
-            setValue('duration', foundService.duration || undefined)
+            setValue('price', foundService.basePrice || foundService.price)
             setPricingMode(foundService.pricingMode || 'NET_AMOUNT')
           } else {
             toast.error('Service non trouvé')
@@ -88,8 +87,7 @@ export default function EditServicePage() {
       const res = await servicesApi.update(pageId, serviceId, {
         name: data.name,
         description: data.description || undefined,
-        price: data.price,
-        duration: data.duration || undefined,
+        basePrice: data.price,
         pricingMode,
       })
       if (res.success) {

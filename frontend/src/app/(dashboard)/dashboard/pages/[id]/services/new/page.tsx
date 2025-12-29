@@ -56,10 +56,8 @@ export default function NewServicePage() {
       const res = await servicesApi.create(pageId, {
         name: data.name,
         description: data.description || undefined,
-        price: data.price,
-        duration: data.duration || undefined,
+        basePrice: data.price,
         pricingMode,
-        isActive: true,
       })
       if (res.success) {
         toast.success('Service créé avec succès')

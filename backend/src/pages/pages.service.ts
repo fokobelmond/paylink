@@ -77,10 +77,12 @@ export class PagesService {
    */
   async findAllByUser(
     userId: string,
-    page = 1,
-    limit = 10,
+    page?: number,
+    limit?: number,
   ) {
-    const skip = (page - 1) * limit;
+    const pageNum = page && page > 0 ? page : 1;
+    const limitNum = limit && limit > 0 ? limit : 10;
+    const skip = (pageNum - 1) * limitNum;
 
     const [pages, total] = await Promise.all([
       this.prisma.page.findMany({
@@ -96,7 +98,7 @@ export class PagesService {
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: limitNum,
       }),
       this.prisma.page.count({ where: { userId } }),
     ]);
@@ -104,9 +106,9 @@ export class PagesService {
     return {
       data: pages,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
     };
   }
 

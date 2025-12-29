@@ -2,12 +2,13 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OrangeMoneyProvider } from './providers/orange-money.provider';
+import { MtnMomoProvider } from './providers/mtn-momo.provider';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { PaymentProvider, TransactionStatus } from '@prisma/client';
 import { nanoid } from 'nanoid';
@@ -28,6 +29,8 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private notifications: NotificationsService,
+    private orangeMoney: OrangeMoneyProvider,
+    private mtnMomo: MtnMomoProvider,
   ) {}
 
   /**
@@ -366,33 +369,54 @@ export class PaymentsService {
   }
 
   /**
-   * Appeler l'API du provider de paiement (simulé)
+   * Appeler l'API du provider de paiement
    */
   private async callPaymentProvider(
     provider: PaymentProvider,
     transaction: any,
   ): Promise<PaymentProviderResponse> {
-    // Simulation - En production, appeler les vraies APIs
-    // Orange Money API ou MTN MoMo API
-
     this.logger.log(`Appel ${provider} pour ${transaction.reference}`);
 
-    // Simuler un délai réseau
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const backendUrl = this.configService.get('BACKEND_URL') || 'http://localhost:4000';
 
-    // Simuler une réponse réussie
-    return {
-      success: true,
-      transactionId: `${provider}-${nanoid(12)}`,
-      message: 'Payment initiated',
-    };
+    if (provider === 'ORANGE_MONEY') {
+      const result = await this.orangeMoney.initiatePayment({
+        amount: transaction.grossAmount,
+        currency: 'XAF',
+        orderId: transaction.reference,
+        description: `Paiement PayLink - ${transaction.reference}`,
+        notifyUrl: `${backendUrl}/api/payments/webhook/orange_money`,
+        returnUrl: `${frontendUrl}/pay/success?ref=${transaction.reference}`,
+        cancelUrl: `${frontendUrl}/pay/cancel?ref=${transaction.reference}`,
+        customerMsisdn: transaction.payerPhone,
+        customerEmail: transaction.payerEmail,
+        customerName: transaction.payerName,
+      });
 
-    // En production:
-    // if (provider === 'ORANGE_MONEY') {
-    //   return this.callOrangeMoneyApi(transaction);
-    // } else {
-    //   return this.callMtnMomoApi(transaction);
-    // }
+      return {
+        success: result.success,
+        transactionId: result.transactionId || result.payToken,
+        paymentUrl: result.paymentUrl,
+        message: result.message,
+      };
+    } else {
+      // MTN MoMo
+      const result = await this.mtnMomo.initiatePayment({
+        amount: transaction.grossAmount,
+        currency: 'XAF',
+        externalId: transaction.reference,
+        payerPartyId: transaction.payerPhone,
+        payerMessage: `Paiement PayLink - ${transaction.reference}`,
+        payeeNote: `Transaction ${transaction.reference}`,
+      });
+
+      return {
+        success: result.success,
+        transactionId: result.referenceId,
+        message: result.message,
+      };
+    }
   }
 
   /**

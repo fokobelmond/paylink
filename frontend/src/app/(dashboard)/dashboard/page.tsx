@@ -58,7 +58,7 @@ export default function DashboardPage() {
         // Charger les pages de l'utilisateur
         const pagesResponse = await pagesApi.list(1, 5)
         if (pagesResponse.success && pagesResponse.data) {
-          setPages(pagesResponse.data.items || [])
+          setPages(pagesResponse.data.data || [])
         }
       } catch (error) {
         console.log('Erreur chargement pages:', (error as ApiError).message)
