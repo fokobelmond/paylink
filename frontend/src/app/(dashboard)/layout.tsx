@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { cn, getInitials, getAvatarColor } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
+import { useNotificationStore } from '@/store/notifications'
 import { useState } from 'react'
 
 const navigation = [
@@ -36,6 +37,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const router = useRouter()
   const { user, isAuthenticated, isLoading, checkAuth, logout } = useAuthStore()
+  const { unreadCount } = useNotificationStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
@@ -109,6 +111,7 @@ export default function DashboardLayout({
           <nav className="flex-1 p-4 space-y-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const isNotifications = item.href === '/dashboard/notifications'
 
               return (
                 <Link
@@ -123,7 +126,12 @@ export default function DashboardLayout({
                   )}
                 >
                   <item.icon className="w-5 h-5" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {isNotifications && unreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -186,14 +194,15 @@ export default function DashboardLayout({
             <div className="flex items-center gap-4 relative z-50">
               <button 
                 type="button"
-                onClick={() => {
-                  console.log('Bell clicked!')
-                  router.push('/dashboard/notifications')
-                }}
+                onClick={() => router.push('/dashboard/notifications')}
                 className="relative p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full pointer-events-none" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center pointer-events-none">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>

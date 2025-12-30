@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatRelativeDate } from '@/lib/utils'
+import { useNotificationStore } from '@/store/notifications'
 
 interface Notification {
   id: string
@@ -56,6 +57,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const { setUnreadCount } = useNotificationStore()
 
   useEffect(() => {
     // Simuler le chargement des notifications
@@ -112,24 +114,34 @@ export default function NotificationsPage() {
   }, [])
 
   const markAsRead = (id: string) => {
-    setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    )
+    setNotifications(prev => {
+      const updated = prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      const newUnreadCount = updated.filter(n => !n.isRead).length
+      setUnreadCount(newUnreadCount)
+      return updated
+    })
   }
 
   const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, isRead: true }))
-    )
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+    setUnreadCount(0)
   }
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+    setNotifications(prev => {
+      const toDelete = prev.find(n => n.id === id)
+      const updated = prev.filter(n => n.id !== id)
+      if (toDelete && !toDelete.isRead) {
+        setUnreadCount(updated.filter(n => !n.isRead).length)
+      }
+      return updated
+    })
   }
 
   const deleteAllNotifications = () => {
     if (confirm('Supprimer toutes les notifications ?')) {
       setNotifications([])
+      setUnreadCount(0)
     }
   }
 
